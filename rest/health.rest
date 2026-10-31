@@ -1,0 +1,10 @@
+@host = http://127.0.0.1:8080
+
+### Liveness
+GET {{host}}/healthz
+
+### Readiness (503 when the database is not configured)
+GET {{host}}/readyz
+
+### OpenAPI
+GET {{host}}/openapi.json

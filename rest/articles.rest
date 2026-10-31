@@ -1,0 +1,10 @@
+@host = http://127.0.0.1:8080
+# Generate with: go run ./cmd/token
+@token = replace-me
+
+### List articles (requires article:read; P0 returns an empty page)
+GET {{host}}/api/admin/v1/articles?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Without a token should return 401
+GET {{host}}/api/admin/v1/articles

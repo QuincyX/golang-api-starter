@@ -1,0 +1,32 @@
+version: "3"
+
+tasks:
+  run:
+    desc: Run the API
+    cmds:
+      - go run ./cmd/api
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Run tests with the race detector (needs CGO)
+    cmds:
+      - go test -race -shuffle=on ./...
+
+  build:
+    desc: Build all commands
+    cmds:
+      - go build ./...
+
+  migrate:
+    desc: Apply migrations
+    cmds:
+      - go run ./cmd/migrate
+
+  token:
+    desc: Mint a development access token
+    cmds:
+      - go run ./cmd/token

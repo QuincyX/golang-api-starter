@@ -1,0 +1,14 @@
+@host = http://127.0.0.1:8080
+# Generate with: go run ./cmd/token
+@token = replace-me
+
+### Current principal
+GET {{host}}/api/admin/v1/auth/me
+Authorization: Bearer {{token}}
+
+### Logout (declares audit action auth.logout)
+POST {{host}}/api/admin/v1/auth/logout
+Authorization: Bearer {{token}}
+
+### Unauthenticated request should return 401
+GET {{host}}/api/admin/v1/auth/me
