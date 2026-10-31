@@ -1,10 +1,14 @@
 @host = http://127.0.0.1:8080
+@metricsHost = http://127.0.0.1:9090
 
 ### Liveness
 GET {{host}}/healthz
 
-### Readiness (503 when the database is not configured)
+### Readiness (503 when the database is not reachable)
 GET {{host}}/readyz
+
+### Metrics
+GET {{metricsHost}}/metrics
 
 ### OpenAPI
 GET {{host}}/openapi.json

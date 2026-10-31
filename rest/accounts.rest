@@ -1,0 +1,21 @@
+@host = http://127.0.0.1:8080
+# Login first, or use: go run ./cmd/token -email admin@example.com
+@token = replace-me
+
+### List accounts
+GET {{host}}/api/admin/v1/accounts?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Create an account and get a one-time activation link
+POST {{host}}/api/admin/v1/accounts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"email":"editor@example.com","displayName":"Editor","roles":["editor"]}
+
+### Roles and permissions
+GET {{host}}/api/admin/v1/roles
+Authorization: Bearer {{token}}
+
+GET {{host}}/api/admin/v1/permissions
+Authorization: Bearer {{token}}

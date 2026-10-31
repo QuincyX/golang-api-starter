@@ -5,13 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 
+	"github.com/example/homebrew-api-starter/internal/config"
 	"github.com/example/homebrew-api-starter/migrations"
 )
 
@@ -22,14 +21,16 @@ func main() {
 }
 
 func run() error {
-	_ = godotenv.Load()
-
-	url := os.Getenv("DATABASE_URL")
-	if url == "" {
-		return fmt.Errorf("DATABASE_URL is required")
+	pg, err := config.LoadPostgres()
+	if err != nil {
+		return fmt.Errorf("load postgres config: %w", err)
+	}
+	dsn, err := pg.DSN()
+	if err != nil {
+		return fmt.Errorf("build postgres dsn: %w", err)
 	}
 
-	db, err := sql.Open("pgx", url)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}

@@ -2,9 +2,18 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strings"
 )
+
+var ErrUnauthenticated = errors.New("unauthenticated")
+
+// SessionValidator checks that the session behind an access token is still
+// active and returns the effective principal (including permissions).
+type SessionValidator interface {
+	ValidateSession(ctx context.Context, sessionID, userID string, tokenVersion int) (Principal, error)
+}
 
 // Principal is the authenticated caller for one request. It is built by the
 // authentication middleware and consumed by the API layer.
@@ -12,6 +21,7 @@ type Principal struct {
 	UserID       string
 	SessionID    string
 	TokenVersion int
+	Email        string
 
 	permissions map[string]struct{}
 }

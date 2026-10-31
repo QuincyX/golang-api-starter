@@ -1,0 +1,11 @@
+@host = http://127.0.0.1:8080
+# Login first, or use: go run ./cmd/token -email admin@example.com
+@token = replace-me
+
+### Latest audit logs
+GET {{host}}/api/admin/v1/audit-logs?limit=50
+Authorization: Bearer {{token}}
+
+### Filter by action
+GET {{host}}/api/admin/v1/audit-logs?limit=50&action=article.publish
+Authorization: Bearer {{token}}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,8 +14,13 @@ import (
 
 	authpkg "github.com/example/homebrew-api-starter/internal/auth"
 	"github.com/example/homebrew-api-starter/internal/config"
+	"github.com/example/homebrew-api-starter/internal/model"
 	"github.com/example/homebrew-api-starter/internal/platform/jwt"
 	"github.com/example/homebrew-api-starter/internal/router"
+	accountsvc "github.com/example/homebrew-api-starter/internal/service/account"
+	articlesvc "github.com/example/homebrew-api-starter/internal/service/article"
+	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
+	"github.com/example/homebrew-api-starter/internal/store"
 )
 
 func TestRouteContractAndAuth(t *testing.T) {
@@ -28,10 +34,29 @@ func TestRouteContractAndAuth(t *testing.T) {
 		Logger:      testLogger(),
 		JWT:         manager,
 		Permissions: authpkg.NewStaticPermissionStore([]string{"article:read"}),
+		Auth:        fakeAuth{},
+		Accounts:    fakeAccount{},
+		Articles:    fakeArticle{},
+		Audit:       fakeAudit{},
 		Version:     "test",
 	})
 	if err != nil {
 		t.Fatalf("newApp: %v", err)
+	}
+
+	if openapi := request(t, app, http.MethodGet, "/openapi.json", ""); openapi.Code != http.StatusOK {
+		t.Fatalf("openapi status = %d, body = %s", openapi.Code, openapi.Body.String())
+	}
+
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/admin/v1/auth/login", strings.NewReader(`{"email":"a@b.c","password":"bad"}`))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRec := httptest.NewRecorder()
+	app.ServeHTTP(loginRec, loginReq)
+	if loginRec.Code != http.StatusUnauthorized {
+		t.Fatalf("login status = %d, want 401", loginRec.Code)
+	}
+	if cookie := loginRec.Header().Get("Set-Cookie"); cookie != "" {
+		t.Fatalf("login must not set cookies: %s", cookie)
 	}
 
 	if reg.Count() < 6 {
@@ -81,6 +106,10 @@ func TestRouteContractAndAuth(t *testing.T) {
 		Logger:      testLogger(),
 		JWT:         manager,
 		Permissions: authpkg.NewStaticPermissionStore(nil),
+		Auth:        fakeAuth{},
+		Accounts:    fakeAccount{},
+		Articles:    fakeArticle{},
+		Audit:       fakeAudit{},
 		Version:     "test",
 	})
 	if err != nil {
@@ -123,4 +152,79 @@ func request(t *testing.T, h http.Handler, method, path, token string) *httptest
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
+}
+
+type fakeAuth struct{}
+
+func (fakeAuth) Login(context.Context, string, string) (*authsvc.LoginResult, error) {
+	return nil, authsvc.ErrInvalidCredentials
+}
+
+func (fakeAuth) Logout(context.Context, authpkg.Principal) error { return nil }
+
+func (fakeAuth) ChangePassword(context.Context, string, string, string) error { return nil }
+
+type fakeArticle struct{}
+
+func (fakeArticle) List(_ context.Context, _ string, _ string, page, pageSize int) (*articlesvc.ListResult, error) {
+	return &articlesvc.ListResult{Items: []model.Article{}, Page: page, PageSize: pageSize}, nil
+}
+
+func (fakeArticle) Get(context.Context, string) (*model.Article, error) {
+	return nil, store.ErrNotFound
+}
+
+func (fakeArticle) Create(context.Context, authpkg.Principal, articlesvc.CreateInput) (*model.Article, error) {
+	return nil, store.ErrNotFound
+}
+
+func (fakeArticle) Update(context.Context, authpkg.Principal, articlesvc.UpdateInput) (*model.Article, error) {
+	return nil, store.ErrNotFound
+}
+
+func (fakeArticle) Publish(context.Context, authpkg.Principal, string) (*model.Article, error) {
+	return nil, store.ErrNotFound
+}
+
+func (fakeArticle) Unpublish(context.Context, authpkg.Principal, string) (*model.Article, error) {
+	return nil, store.ErrNotFound
+}
+
+func (fakeArticle) Delete(context.Context, authpkg.Principal, string) error { return nil }
+
+func (fakeArticle) Revisions(context.Context, string) ([]model.ArticleRevision, error) {
+	return []model.ArticleRevision{}, nil
+}
+
+type fakeAccount struct{}
+
+func (fakeAccount) List(_ context.Context, _ string, page, pageSize int) (*accountsvc.ListResult, error) {
+	return &accountsvc.ListResult{Items: []model.User{}, Page: page, PageSize: pageSize}, nil
+}
+
+func (fakeAccount) Create(context.Context, authpkg.Principal, accountsvc.CreateInput) (*accountsvc.CreateResult, error) {
+	return &accountsvc.CreateResult{User: &model.User{}, ActivationURL: "http://localhost/activate?token=test"}, nil
+}
+
+func (fakeAccount) SetStatus(context.Context, authpkg.Principal, string, string) error  { return nil }
+func (fakeAccount) SetRoles(context.Context, authpkg.Principal, string, []string) error { return nil }
+func (fakeAccount) ResetPassword(context.Context, authpkg.Principal, string) (string, error) {
+	return "http://localhost/activate?token=test", nil
+}
+func (fakeAccount) Sessions(context.Context, string) ([]model.Session, error) {
+	return []model.Session{}, nil
+}
+func (fakeAccount) RevokeSession(context.Context, authpkg.Principal, string, string) error {
+	return nil
+}
+func (fakeAccount) Roles(context.Context) ([]map[string]any, error) { return []map[string]any{}, nil }
+func (fakeAccount) Permissions(context.Context) ([]map[string]any, error) {
+	return []map[string]any{}, nil
+}
+func (fakeAccount) Activate(context.Context, string, string) error { return nil }
+
+type fakeAudit struct{}
+
+func (fakeAudit) List(context.Context, int, int64, string, string) ([]model.AuditLog, int64, error) {
+	return []model.AuditLog{}, 0, nil
 }

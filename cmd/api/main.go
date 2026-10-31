@@ -11,13 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
 	"github.com/example/homebrew-api-starter/internal/config"
 	"github.com/example/homebrew-api-starter/internal/platform/db"
 	"github.com/example/homebrew-api-starter/internal/platform/jwt"
 	"github.com/example/homebrew-api-starter/internal/platform/logx"
+	metricsplatform "github.com/example/homebrew-api-starter/internal/platform/metrics"
 )
 
 // version is injected with -ldflags "-X main.version=...".
@@ -44,33 +42,26 @@ func run() error {
 		return fmt.Errorf("create jwt manager: %w", err)
 	}
 
-	var pool *pgxpool.Pool
-	if cfg.DatabaseURL != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		pool, err = db.Open(ctx, cfg.DatabaseURL)
-		cancel()
-		if err != nil {
-			return fmt.Errorf("connect database: %w", err)
-		}
-		defer pool.Close()
-	} else {
-		logger.Warn("DATABASE_URL is empty; /readyz will report unavailable")
+	dsn, err := cfg.Postgres.DSN()
+	if err != nil {
+		return fmt.Errorf("build postgres dsn: %w", err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	pool, err := db.Open(ctx, dsn)
+	cancel()
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	defer pool.Close()
 
-	var permissions authpkg.PermissionStore
-	if len(cfg.DevPermissions) > 0 {
-		if cfg.IsProduction() {
-			return errors.New("DEV_PERMISSIONS must not be set in production")
-		}
-		permissions = authpkg.NewStaticPermissionStore(cfg.DevPermissions)
-		logger.Warn("static dev permissions enabled", "permissions", cfg.DevPermissions)
-	}
+	metricSet := metricsplatform.New()
 
 	handler, reg, err := newApp(dependencies{
 		Logger:      logger,
 		JWT:         manager,
 		DB:          pool,
-		Permissions: permissions,
+		Metrics:     metricSet,
+		AdminWebURL: cfg.AdminWebURL,
 		Version:     version,
 	})
 	if err != nil {
@@ -96,6 +87,18 @@ func run() error {
 		}
 	}()
 
+	metricsSrv := &http.Server{
+		Addr:              cfg.MetricsAddr,
+		Handler:           metricSet.Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go func() {
+		logger.Info("metrics server listening", "addr", cfg.MetricsAddr)
+		if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("metrics server failed", "error", err)
+		}
+	}()
+
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -110,6 +113,9 @@ func run() error {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+	if err := metricsSrv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("metrics shutdown failed", "error", err)
 	}
 	logger.Info("server stopped")
 	return nil

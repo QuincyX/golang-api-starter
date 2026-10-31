@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -13,10 +14,12 @@ import (
 // Authenticate verifies the access JWT and attaches the principal. The public
 // route set comes from the route registry, so adding a public route cannot
 // accidentally leave it behind auth (and vice versa).
-//
-// P0 verifies signature/claims only. P1 adds the session + user status +
-// token_version lookup described in the design doc.
-func Authenticate(reg *router.Registry, manager *jwt.Manager, permissions auth.PermissionStore) func(http.Handler) http.Handler {
+func Authenticate(
+	reg *router.Registry,
+	manager *jwt.Manager,
+	permissions auth.PermissionStore,
+	sessions auth.SessionValidator,
+) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if reg.IsPublic(r.Method, r.URL.Path) {
@@ -32,6 +35,20 @@ func Authenticate(reg *router.Registry, manager *jwt.Manager, permissions auth.P
 			claims, err := manager.Parse(raw)
 			if err != nil {
 				writeUnauthorized(w, r, "invalid or expired token")
+				return
+			}
+
+			if sessions != nil {
+				principal, err := sessions.ValidateSession(r.Context(), claims.SessionID, claims.Subject, claims.TokenVersion)
+				if errors.Is(err, auth.ErrUnauthenticated) {
+					writeUnauthorized(w, r, "session is no longer valid")
+					return
+				}
+				if err != nil {
+					shared.WriteProblem(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "session lookup failed")
+					return
+				}
+				next.ServeHTTP(w, r.WithContext(auth.WithPrincipal(r.Context(), principal)))
 				return
 			}
 

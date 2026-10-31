@@ -11,6 +11,11 @@ tasks:
     cmds:
       - go test ./...
 
+  docs:
+    desc: Check required docs and relative links
+    cmds:
+      - go test ./internal/arch
+
   test:race:
     desc: Run tests with the race detector (needs CGO)
     cmds:
@@ -26,7 +31,12 @@ tasks:
     cmds:
       - go run ./cmd/migrate
 
+  seed:
+    desc: Create the first super admin
+    cmds:
+      - go run ./cmd/seed
+
   token:
     desc: Mint a development access token
     cmds:
-      - go run ./cmd/token
+      - go run ./cmd/token -email admin@example.com

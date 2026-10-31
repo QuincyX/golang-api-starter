@@ -1,9 +1,29 @@
 @host = http://127.0.0.1:8080
-# Generate with: go run ./cmd/token
+# Login first, or use: go run ./cmd/token -email admin@example.com
 @token = replace-me
+@articleId = replace-me
 
-### List articles (requires article:read; P0 returns an empty page)
+### List articles
 GET {{host}}/api/admin/v1/articles?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Create a draft
+POST {{host}}/api/admin/v1/articles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"title":"Hello","slug":"hello","summary":"first post","contentMd":"# Hello\n\nworld"}
+
+### Get one
+GET {{host}}/api/admin/v1/articles/{{articleId}}
+Authorization: Bearer {{token}}
+
+### Publish
+POST {{host}}/api/admin/v1/articles/{{articleId}}/publish
+Authorization: Bearer {{token}}
+
+### Revisions
+GET {{host}}/api/admin/v1/articles/{{articleId}}/revisions
 Authorization: Bearer {{token}}
 
 ### Without a token should return 401
