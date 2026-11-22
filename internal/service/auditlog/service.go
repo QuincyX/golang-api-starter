@@ -3,8 +3,8 @@ package auditlog
 import (
 	"context"
 
-	"github.com/example/homebrew-api-starter/internal/model"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 type Service struct {

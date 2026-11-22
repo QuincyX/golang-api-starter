@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/example/homebrew-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/model"
 )
 
 var (

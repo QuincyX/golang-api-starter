@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/router"
+	"github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/router"
 )
 
 func testRegistry(t *testing.T) *router.Registry {

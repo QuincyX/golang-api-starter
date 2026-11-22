@@ -1,14 +1,14 @@
 # 工程文档
 
-本目录是 `homebrew-api-starter` 的工程文档入口。文档以**当前代码**为准，任何非业务层的框架功能变更都必须同步更新相应文档。
+本目录是 `golang-api-starter` 的工程文档入口。文档以**当前代码**为准，任何非业务层的框架功能变更都必须同步更新相应文档。
 
 | 文档 | 内容 | 主要读者 |
 | --- | --- | --- |
-| [AGENTS.md](../AGENTS.md) | Agent/自动化协作规则、变更分类、完成定义 | AI Agent、维护者 |
+| [AGENTS.md](../AGENTS.md) | Agent 入口地图：读取路由、红线、完成定义（细节链接到本目录） | AI Agent、维护者 |
 | [功能规格](../specs/README.md) | 非平凡功能的 spec/plan/tasks/verification 流程 | 产品、后端、Agent |
 | [架构说明](./architecture.md) | 分层、模块边界、请求链、扩展位置、已知约束 | 后端开发者 |
 | [工程说明与约束](./engineering.md) | 环境、命令、质量门禁、依赖策略、测试与发布约束 | 开发者、Reviewer |
-| [测试规范](./testing.md) | 单元/集成测试边界、命名、确定性、覆盖率与用例清单 | 开发者、Reviewer |
+| [测试规范](./testing.md) | 单元/契约/集成边界、快照与迁移校验、确定性、覆盖率与用例清单 | 开发者、Reviewer |
 | [变更记录](./changelog.md) | 非业务层框架变更的追加式记录 | 全体维护者 |
 | [README](../README.md) | 项目介绍、快速开始、接口清单 | 新成员、使用者 |
 | [设计文档](./design.md) | 完整技术方案、数据模型、审计与部署设计 | 架构评审、维护者 |
@@ -20,7 +20,7 @@
 
 | 事实类型 | 唯一来源 | 其他文档的责任 |
 | --- | --- | --- |
-| 命令、参数、CI、环境变量、发布流程 | [engineering.md](./engineering.md) | 只链接或给最小入口 |
+| 命令、参数、环境变量、部署流程 | [engineering.md](./engineering.md) | 只链接或给最小入口 |
 | 分层、目录职责、请求链、架构边界 | [architecture.md](./architecture.md) | 只链接或摘要 |
 | Agent 行为规则、准入、完成定义 | [AGENTS.md](../AGENTS.md) | 只链接，不复制完整规则 |
 | 用户使用方式、接口、部署入口 | [README.md](../README.md) | 保持面向用户的最新说明 |

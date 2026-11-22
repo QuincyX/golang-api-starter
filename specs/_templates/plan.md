@@ -38,7 +38,7 @@
 
 - 单元：
 - Handler：
-- 集成（testcontainers/PG）：
+- 集成（`TEST_DATABASE_URL` + PostgreSQL 18）：
 - 路由契约：
 - 人工验收：
 

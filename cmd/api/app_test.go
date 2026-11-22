@@ -12,15 +12,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/config"
-	"github.com/example/homebrew-api-starter/internal/model"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/router"
-	accountsvc "github.com/example/homebrew-api-starter/internal/service/account"
-	articlesvc "github.com/example/homebrew-api-starter/internal/service/article"
-	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
-	"github.com/example/homebrew-api-starter/internal/store"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/config"
+	"github.com/example/golang-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/router"
+	accountsvc "github.com/example/golang-api-starter/internal/service/account"
+	articlesvc "github.com/example/golang-api-starter/internal/service/article"
+	authsvc "github.com/example/golang-api-starter/internal/service/auth"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 func TestRouteContractAndAuth(t *testing.T) {
@@ -133,7 +133,7 @@ func testConfig() config.Config {
 	return config.Config{
 		AppEnv:      "test",
 		JWTSecret:   strings.Repeat("s", 32),
-		JWTIssuer:   "homebrew-api",
+		JWTIssuer:   "golang-api",
 		JWTAudience: "admin-web",
 		AccessTTL:   15 * time.Minute,
 	}

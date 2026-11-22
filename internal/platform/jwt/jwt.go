@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"uuid"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 // Claims deliberately contains no permissions or profile data. Permissions are
@@ -50,15 +50,13 @@ func (m *Manager) Sign(userID, sessionID string, tokenVersion int) (string, time
 	claims := Claims{
 		SessionID:    sessionID,
 		TokenVersion: tokenVersion,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    m.issuer,
-			Audience:  jwt.ClaimStrings{m.audience},
-			Subject:   userID,
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			ID:        uuid.NewString(),
-		},
+		Issuer:       m.issuer,
+		Audience:     jwt.ClaimStrings{m.audience},
+		Subject:      userID,
+		IssuedAt:     jwt.NewNumericDate(now),
+		NotBefore:    jwt.NewNumericDate(now.Add(-5 * time.Second)),
+		ExpiresAt:    jwt.NewNumericDate(expiresAt),
+		ID:           uuid.New().String(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(m.secret)

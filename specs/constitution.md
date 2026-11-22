@@ -2,7 +2,7 @@
 
 - 版本：1.0
 - 批准日期：2026-10-31
-- 适用范围：`homebrew-api-starter` 的非平凡业务功能
+- 适用范围：`golang-api-starter` 的非平凡业务功能
 - 上位约束：[AGENTS.md](../AGENTS.md)、[架构说明](../docs/architecture.md)、[工程说明](../docs/engineering.md)
 
 本宪法只定义**功能如何被规格化、计划、验证和收敛**，不重复 Go、API、数据库、鉴权、审计等工程规则。出现冲突时，以 `AGENTS.md` 和 `docs/` 为准。

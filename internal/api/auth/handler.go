@@ -7,9 +7,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/router"
-	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
+	"github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/router"
+	authsvc "github.com/example/golang-api-starter/internal/service/auth"
 )
 
 type Service interface {

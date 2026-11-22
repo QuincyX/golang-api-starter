@@ -1,11 +1,11 @@
 # 作为模板使用
 
-本目录是 `homebrew` 管理后台 API 的起始模板。复制后按下面的清单替换项目身份，然后开始写业务。
+本目录是管理后台 API 的起始模板。复制后按下面的清单替换项目身份，然后开始写业务。
 
 ## 1. 复制与初始化
 
 ```bash
-cp -r homebrew-api-starter my-admin-api
+cp -r golang-api-starter my-admin-api
 cd my-admin-api
 cp .env.example .env
 ```
@@ -16,18 +16,19 @@ cp .env.example .env
 
 | 位置 | 需要替换 |
 | --- | --- |
-| `go.mod` | `module github.com/example/homebrew-api-starter` → 团队仓库地址；全仓库 import 同步 |
-| `JWT_ISSUER` / `JWT_AUDIENCE` | `homebrew-api` / `admin-web` → 新服务标识 |
-| `internal/api/app.go` | OpenAPI 标题 `Homebrew Admin API` |
-| `Caddyfile` / `ADMIN_DOMAIN` | 新域名 |
-| `.env.example` / `compose.yaml` | 数据库名、账号、密码、端口 |
+| `go.mod` | `module github.com/example/golang-api-starter` → 团队仓库地址；全仓库 import 同步 |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | `golang-api` / `admin-web` → 新服务标识 |
+| `internal/api/app.go` | OpenAPI 标题 `Golang Admin API` |
+| `.env.example` | 数据库名、账号、密码、端口 |
 | `README.md` | 项目名、快速开始、接口说明 |
+| `AGENTS.md` | 保留入口地图与门禁，按新项目调整红线 |
 | `docs/design.md` | 保留结构，替换业务边界和扩展点 |
 
 ## 3. 首次启动
 
+先准备本地 PostgreSQL 18（模板不内置容器编排），再执行：
+
 ```bash
-docker compose up -d postgres
 go run ./cmd/migrate
 go run ./cmd/seed
 go run ./cmd/api
@@ -61,18 +62,15 @@ go run ./cmd/api
 
 - 路由只能通过 `router.Register` 注册；非 GET 必须有 `AuditAction`。
 - 新增业务代码必须有单元/契约测试；鉴权改动覆盖 401/403，富文本覆盖 XSS。
-- 迁移只追加；不要修改已应用文件。
+- 迁移只追加；不要修改已应用文件，新增后跑 `task migrations:checksum`。
+- API 契约有意变更后跑 `task api:update`，并用 `task api:breaking` 检查破坏性变更。
 - 框架变更同一次更新 `docs/changelog.md` 和受影响文档。
 - 不引入 proto3、ORM、Redis、消息队列或微服务，除非先写 spec/ADR。
 
 ## 7. 交付前检查
 
 ```bash
-gofmt -l .
-go vet ./...
-go test ./...
-go build ./...
-docker compose config --quiet
+task verify
 ```
 
-再确认：没有 `.env`、密钥、本地 DB 数据、测试 token、生成的 Linux 二进制。
+再确认：没有 `.env`、密钥、本地 DB 数据、测试 token、生成的 Linux 二进制、`.tmp/`。

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/example/homebrew-api-starter/internal/platform/reqid"
+	"github.com/example/golang-api-starter/internal/platform/reqid"
 )
 
 type statusWriter struct {

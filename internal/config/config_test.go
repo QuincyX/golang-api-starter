@@ -12,7 +12,7 @@ func TestPostgresDSNEscapesCredentials(t *testing.T) {
 	pg := Postgres{
 		Host:     "db.internal",
 		Port:     5432,
-		Database: "homebrew",
+		Database: "admin",
 		User:     "admin",
 		Password: "p@ss:word",
 		SSLMode:  "require",
@@ -26,7 +26,7 @@ func TestPostgresDSNEscapesCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse DSN: %v", err)
 	}
-	if u.Host != "db.internal:5432" || u.Path != "/homebrew" {
+	if u.Host != "db.internal:5432" || u.Path != "/admin" {
 		t.Fatalf("unexpected DSN parts: %s", dsn)
 	}
 	if u.User.Username() != "admin" {
@@ -76,7 +76,7 @@ func TestRedisAddrAndValidate(t *testing.T) {
 func TestNestedEnvParsing(t *testing.T) {
 	t.Setenv("POSTGRES_HOST", "db.internal")
 	t.Setenv("POSTGRES_PORT", "6543")
-	t.Setenv("POSTGRES_DB", "homebrew")
+	t.Setenv("POSTGRES_DB", "admin")
 	t.Setenv("POSTGRES_USER", "app")
 	t.Setenv("POSTGRES_PASSWORD", "secret")
 	t.Setenv("POSTGRES_SSLMODE", "require")
@@ -89,7 +89,7 @@ func TestNestedEnvParsing(t *testing.T) {
 	if err := env.Parse(&cfg); err != nil {
 		t.Fatalf("env.Parse: %v", err)
 	}
-	if cfg.Postgres.Host != "db.internal" || cfg.Postgres.Port != 6543 || cfg.Postgres.Database != "homebrew" {
+	if cfg.Postgres.Host != "db.internal" || cfg.Postgres.Port != 6543 || cfg.Postgres.Database != "admin" {
 		t.Fatalf("unexpected postgres config: %+v", cfg.Postgres)
 	}
 	if cfg.Redis.Host != "redis.internal" || cfg.Redis.Port != 6380 || cfg.Redis.DB != 3 {

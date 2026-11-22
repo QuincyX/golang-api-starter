@@ -7,9 +7,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/model"
-	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/model"
+	authsvc "github.com/example/golang-api-starter/internal/service/auth"
 )
 
 type fakeLoginService struct {

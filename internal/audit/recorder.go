@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/example/homebrew-api-starter/internal/platform/requestmeta"
+	"github.com/example/golang-api-starter/internal/platform/requestmeta"
 )
 
 type Event struct {

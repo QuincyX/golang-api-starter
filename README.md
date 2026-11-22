@@ -1,26 +1,27 @@
-# Homebrew Admin API Starter
+# Golang Admin API Starter
 
-`homebrew` 管理后台接口服务的起始模板：账号/鉴权、文章、审计的可演进底座。
+Golang 管理后台接口服务的起始模板：账号/鉴权、文章、审计的可演进底座。
 
 ## 定位
 
-- 复制本目录即可开始一个新的 homebrew 管理后台 API 项目。
-- 保留路由契约、JWT 会话、RBAC、文章、审计、迁移、Compose 与测试骨架。
-- 模块路径 `github.com/example/homebrew-api-starter` 是占位，接入时替换成团队仓库地址。
+- 复制本目录即可开始一个新的管理后台 API 项目。
+- 保留路由契约、JWT 会话、RBAC、文章、审计、迁移与测试骨架。
+- 模块路径 `github.com/example/golang-api-starter` 是占位，接入时替换成团队仓库地址。
 - 复制/重命名/首次启动见 [docs/template-guide.md](docs/template-guide.md)。
 
 当前包含：
 
-- Go 1.27 + chi + huma（OpenAPI 3.1 / RFC 9457）
+- Go 1.27.4 + chi + huma（OpenAPI 3.1 / RFC 9457）；工具链版本固定在 `go.mod`
 - PostgreSQL 18 + pgxpool + goose 迁移；`POSTGRES_*` 分项，`DATABASE_URL` 可选覆盖
 - P1：Argon2id 登录、8h access JWT、session/`token_version` 校验、RBAC、账号管理、一次性设密链接
 - P2：文章 CRUD、发布/下线、版本记录、Markdown 渲染与 HTML 清洗
 - P3：操作审计（同事务落库 + 查询）、Prometheus metrics
 - Redis 配置（`REDIS_*`，后续预留；当前只校验不连接）
 - **路由契约**：每条路由声明 `Permission`，非 GET 路由声明 `AuditAction`，启动双向覆盖检查
-- 单机 Compose：Caddy + API + PostgreSQL + 一次性迁移
-- [AGENTS.md](AGENTS.md) + [docs/](docs/README.md) + [specs/](specs/README.md)
-- 测试规范见 [docs/testing.md](docs/testing.md)，含单元/契约/架构测试清单
+- 配置全部来自环境变量；迁移作为独立命令执行，不依赖容器编排
+- Agent 友好门禁：`task verify` 聚合格式、测试、构建、lint、漏洞扫描；OpenAPI 快照与迁移校验和防止静默漂移
+- [AGENTS.md](AGENTS.md) 是 Agent 入口地图 + [docs/](docs/README.md) + [specs/](specs/README.md)
+- 测试规范见 [docs/testing.md](docs/testing.md)，含单元/契约/架构/集成测试清单
 
 ## 明确不包含
 
@@ -58,25 +59,14 @@ specs/         # spec/plan/tasks/verification
 
 ## 快速开始
 
-### 方式一：Compose
+前置：启动本地 PostgreSQL 18（`uuidv7()` 依赖 18）并创建数据库（默认 `admin`）；模板不内置容器编排。
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
-go run ./cmd/seed
+go run ./cmd/migrate   # 应用迁移
+go run ./cmd/seed      # 创建首个超管（表为空时）
+go run ./cmd/api       # 监听 :8080
 curl http://127.0.0.1:8080/healthz
-```
-
-Compose 会先跑 `migrate`，再启动 `api`，最后起 Caddy。
-
-### 方式二：本地进程
-
-```bash
-cp .env.example .env
-docker compose up -d postgres
-go run ./cmd/migrate
-go run ./cmd/seed
-go run ./cmd/api
 ```
 
 `.env.example` 默认超管是 `admin@example.com` / `ChangeMe123!`，仅用于本地。
@@ -152,16 +142,18 @@ router.Register(reg, api, router.Route{
 
 生产必须设置 PostgreSQL 凭据（或 `DATABASE_URL`）、至少 32 字节的 `JWT_SECRET`。
 
-## 测试
+## 质量门禁
 
 ```bash
-gofmt -l .
-go vet ./...
-go test ./...
-go build ./...
+task verify   # gofmt 检查 + go vet + go test + go build + lint + vuln
 ```
 
-`go test ./...` 包含路由契约与 OpenAPI、401/403、middleware、metrics、文档链接、分层依赖、密码与文章渲染测试。测试边界与用例清单见 [docs/testing.md](docs/testing.md)。迁移、seed、登录、RBAC、文章发布、审计与 metrics 已在 WSL 的 PostgreSQL 18.6 上做过手工端到端验证；Docker 镜像与 Caddy 尚未在真实环境验证。
+- lint / vuln / OpenAPI 对比工具的版本固定在 `Taskfile.yml` 的 vars，无需全局安装；应用模块的 `go.mod` 保持干净。
+- API 契约快照在 `cmd/api/testdata/openapi.json`：有意变更后 `task api:update`；跨分支检查 `BASE=main task api:breaking`。
+- 已应用迁移有校验和清单：新增迁移后 `task migrations:checksum`。
+- 集成测试：先准备已迁移的测试库，再 `TEST_DATABASE_URL=... task test:integration`。
+
+`task test` 包含路由契约、OpenAPI 快照、401/403、middleware、metrics、文档链接、分层依赖、gofmt、迁移校验和、密码与文章渲染测试。测试边界与用例清单见 [docs/testing.md](docs/testing.md)。迁移、seed、登录、RBAC、文章发布、审计与 metrics 已在 WSL 的 PostgreSQL 18.6 上做过手工端到端验证。
 
 ## 下一步
 

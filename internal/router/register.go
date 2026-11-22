@@ -6,7 +6,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/example/homebrew-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/auth"
 )
 
 // Register is the only way API modules add routes. It records the contract

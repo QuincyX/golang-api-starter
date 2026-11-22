@@ -43,7 +43,7 @@ auditor 或超管可以按 action/actor 查询审计，keyset 分页；每条记
 - **FR-003**：`GET /audit-logs` 支持 `limit/cursor/action/actorId`，按 id 倒序 keyset。
 - **FR-004**：`audit:read` 权限；没有权限 403。
 - **FR-005**：Prometheus 指标包含 method/route/status 维度的请求计数与延迟。
-- **FR-006**：metrics 只监听内网/loopback，不经过 Caddy 公开暴露。
+- **FR-006**：metrics 只监听内网/loopback，不经过公开反向代理暴露。
 
 ## 边界与异常
 

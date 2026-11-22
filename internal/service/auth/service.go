@@ -9,12 +9,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/example/homebrew-api-starter/internal/audit"
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/model"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/platform/requestmeta"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/audit"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/platform/requestmeta"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 var (
@@ -226,6 +226,7 @@ func (s *Service) auditFailure(ctx context.Context, userID, email, reason string
 type loginLimiter struct {
 	mu      sync.Mutex
 	windows map[string]limitWindow
+	now     func() time.Time
 }
 
 type limitWindow struct {
@@ -234,14 +235,14 @@ type limitWindow struct {
 }
 
 func newLoginLimiter() *loginLimiter {
-	return &loginLimiter{windows: make(map[string]limitWindow)}
+	return &loginLimiter{windows: make(map[string]limitWindow), now: time.Now}
 }
 
 func (l *loginLimiter) allow(key string, limit int, period time.Duration) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	now := time.Now()
+	now := l.now()
 	if len(l.windows) > 10000 {
 		l.windows = make(map[string]limitWindow)
 	}

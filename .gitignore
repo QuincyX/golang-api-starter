@@ -2,6 +2,7 @@
 .env.local
 /bin/
 /tmp/
+/.tmp/
 *.log
 coverage.out
 coverage.html

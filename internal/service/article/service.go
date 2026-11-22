@@ -15,10 +15,10 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 
-	"github.com/example/homebrew-api-starter/internal/audit"
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/model"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/audit"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 var (
@@ -218,8 +218,6 @@ func (s *Service) Revisions(ctx context.Context, id string) ([]model.ArticleRevi
 	items, err := s.store.Queries().ListArticleRevisions(ctx, id)
 	return items, mapStoreError(err)
 }
-
-type transitionFunc func(context.Context, string) (*model.Article, error)
 
 func (s *Service) transition(ctx context.Context, actor authpkg.Principal, id, action string, publish bool) (*model.Article, error) {
 	var out *model.Article

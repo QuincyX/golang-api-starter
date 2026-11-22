@@ -1,9 +1,9 @@
 # 技术方案
 
-> 项目：`homebrew-api-starter`（homebrew 管理后台 API 起始模板）  
+> 项目：`golang-api-starter`（Golang 管理后台 API 起始模板）  
 > 适用前提：PostgreSQL 18、同源 Vue 管理后台、单机部署、1–3 人团队、管理员 < 200、日请求 < 百万  
 > 鉴权：JWT Bearer access（无 Cookie/refresh，默认 8h + 每请求 session 校验）  
-> 部署：单机 Docker Compose + Caddy
+> 部署：单机进程 + 环境变量注入（模板不内置容器与反向代理配置）
 
 本文说明“为什么这样选”和“数据/安全边界”。目录职责、请求链和扩展位置见 [architecture.md](./architecture.md)；命令与门禁见 [engineering.md](./engineering.md)；测试规范见 [testing.md](./testing.md)。
 
@@ -29,7 +29,7 @@
 
 | 层次 | 选型 | 理由 |
 | --- | --- | --- |
-| 语言 | Go 1.27.3 | 标准库 HTTP、部署简单、静态二进制 |
+| 语言 | Go 1.27.4 | 标准库 HTTP、部署简单、静态二进制；含 `net/http` 安全修复 |
 | 路由 | `go-chi/chi/v5` | 完全兼容 `net/http`，中间件组合清晰 |
 | API 契约 | `danielgtaylor/huma/v2` | 结构体生成 OpenAPI 3.1，请求校验与 problem+json |
 | 数据库 | PostgreSQL 18 | `uuidv7()`、JSONB、部分索引、`timestamptz` |
@@ -42,14 +42,19 @@
 | 日志 | `log/slog` | JSON、请求级字段、零依赖 |
 | Markdown | `goldmark` + `bluemonday` | 渲染与 HTML 清洗分离 |
 | 指标 | `prometheus/client_golang` | 请求计数/延迟，独立内网端口 |
-| 测试 | 标准库 `testing` | 单元/契约测试；集成测试按需启用 |
+| ID | 标准库 `uuid`（Go 1.27） | `NewV7()` 时间有序；去掉 `google/uuid` 直接依赖 |
+| 测试 | 标准库 `testing` + `testing/synctest` | 单元/契约测试；假时钟与 `httptest.NewTestServer` 保证确定性 |
+| 质量工具 | golangci-lint、govulncheck、oasdiff | 版本固定在 `Taskfile.yml`，本地/流水线一致，`go.mod` 保持干净 |
 
-版本以 `go.mod` 为准；不追求文档里锁死补丁号。新增直接依赖必须说明用途与替代方案，并写入 [changelog](./changelog.md)。
+版本以 `go.mod` 为准；不追求文档里锁死补丁号。JSON 继续使用 `encoding/json` v1 API（Go 1.27 已由 v2 实现，行为保持兼容）；需要严格拒绝重复 key/非法 UTF-8 时再显式引入 v2 并补契约测试。新增直接依赖必须说明用途与替代方案，并写入 [changelog](./changelog.md)。
 
 ## 3. 架构
 
 ```text
-Caddy → chi middleware → huma → router.Register → api → service → store → PostgreSQL
+客户端（TLS 由部署环境终止）
+  │
+  ▼
+chi middleware → huma → router.Register → api → service → store → PostgreSQL
                                       │
                                       ├→ auth.Principal / PermissionStore
                                       ├→ audit.Recorder（同事务）
@@ -167,20 +172,20 @@ JWT_SECRET/JWT_ISSUER/JWT_AUDIENCE/ACCESS_TTL
 BOOTSTRAP_ADMIN_EMAIL/PASSWORD/NAME（仅 cmd/seed）
 ```
 
-- 单机 Compose：`postgres` + 一次性 `migrate` + `api` + `caddy`；Redis 可选 profile。
-- API 容器内监听 `:8080`，metrics 监听 `:9090`；生产只由 Caddy 暴露 443，metrics 走内网。
-- 镜像：多阶段构建 + distroless 非 root。
+- 进程直连 PostgreSQL；迁移通过 `cmd/migrate` 独立执行，先于 API 启动。
+- API 默认监听 `:8080`，metrics 默认 `127.0.0.1:9090`；TLS、反向代理与进程守护由部署环境提供，metrics 只走内网/loopback。
+- 容器、编排与 CI 不在模板内；需要时由使用方按运行环境补充。
 - 备份：每日 `pg_dump -Fc` + 异地对象存储；需要 PITR 再加 WAL 归档。
 
 完整命令见 [engineering.md](./engineering.md)。
 
 ## 10. 测试与质量
 
-- 单元：密码、JWT、限流、slug/diff、分页、metrics、middleware。
-- 契约：路由覆盖、OpenAPI 生成、401/403、problem+json。
-- 架构：`internal/arch` 检查文档链接、必需文件和 api→service→store 依赖。
-- 集成：真实 PostgreSQL 验证迁移、登录、RBAC、文章、审计；需要显式开启。
-- 门禁：`gofmt -l`、`go vet`、`go test`、`go build`；CI 跑 `go test -race`。
+- 单元：密码、JWT、限流（`synctest` 假时钟）、slug/diff、分页、metrics、middleware。
+- 契约：路由覆盖、OpenAPI 快照、401/403、problem+json。
+- 架构：`internal/arch` 检查文档链接、必需文件、api→service→store 依赖、路由/配置边界、gofmt、迁移校验和。
+- 集成：`TEST_DATABASE_URL` + `-tags=integration` 验证数据库连通与 schema；登录/RBAC/文章/审计的写路径逐步补齐。
+- 门禁：`task verify`（格式、vet、test、build、lint、vuln）；Linux 环境跑 `task test:race`。
 - 测试规范见 [testing.md](./testing.md)。
 
 ## 11. 已知限制与演进
@@ -191,7 +196,7 @@ BOOTSTRAP_ADMIN_EMAIL/PASSWORD/NAME（仅 cmd/seed）
 - Redis 仅配置；限流为进程内，多实例需 Redis。
 - 分类/标签 CRUD、定时发布、封面上传未做。
 - 审计无导出/保留/OTel；metrics 标签暂用原始 path。
-- 自动化集成测试和 Docker/Caddy 实机验证仍可加强。
+- 集成测试目前只有只读冒烟骨架，写路径覆盖仍可加强。
 
 演进原则：
 
@@ -203,7 +208,7 @@ BOOTSTRAP_ADMIN_EMAIL/PASSWORD/NAME（仅 cmd/seed）
 ## 12. 参考
 
 - [architecture.md](./architecture.md)：模块边界、请求链、扩展位置
-- [engineering.md](./engineering.md)：命令、CI、部署、编码约束
+- [engineering.md](./engineering.md)：命令、部署、编码约束
 - [testing.md](./testing.md)：测试边界与用例清单
 - [template-guide.md](./template-guide.md)：复制与清理模板
 - [specs/](../specs/README.md)：功能规格与验收

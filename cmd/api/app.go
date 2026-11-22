@@ -11,22 +11,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	accountapi "github.com/example/homebrew-api-starter/internal/api/account"
-	articleapi "github.com/example/homebrew-api-starter/internal/api/article"
-	auditapi "github.com/example/homebrew-api-starter/internal/api/audit"
-	authapi "github.com/example/homebrew-api-starter/internal/api/auth"
-	healthapi "github.com/example/homebrew-api-starter/internal/api/health"
-	auditpkg "github.com/example/homebrew-api-starter/internal/audit"
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/middleware"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/platform/metrics"
-	"github.com/example/homebrew-api-starter/internal/router"
-	accountsvc "github.com/example/homebrew-api-starter/internal/service/account"
-	articlesvc "github.com/example/homebrew-api-starter/internal/service/article"
-	auditsvc "github.com/example/homebrew-api-starter/internal/service/auditlog"
-	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
-	"github.com/example/homebrew-api-starter/internal/store"
+	accountapi "github.com/example/golang-api-starter/internal/api/account"
+	articleapi "github.com/example/golang-api-starter/internal/api/article"
+	auditapi "github.com/example/golang-api-starter/internal/api/audit"
+	authapi "github.com/example/golang-api-starter/internal/api/auth"
+	healthapi "github.com/example/golang-api-starter/internal/api/health"
+	auditpkg "github.com/example/golang-api-starter/internal/audit"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/middleware"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/platform/metrics"
+	"github.com/example/golang-api-starter/internal/router"
+	accountsvc "github.com/example/golang-api-starter/internal/service/account"
+	articlesvc "github.com/example/golang-api-starter/internal/service/article"
+	auditsvc "github.com/example/golang-api-starter/internal/service/auditlog"
+	authsvc "github.com/example/golang-api-starter/internal/service/auth"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 type dependencies struct {
@@ -182,7 +182,7 @@ func isMetaRoute(route string) bool {
 }
 
 func humaConfig(version string) huma.Config {
-	cfg := huma.DefaultConfig("Homebrew Admin API", version)
+	cfg := huma.DefaultConfig("Golang Admin API", version)
 	cfg.Info.Description = "Management API: accounts, articles, audit."
 	cfg.OpenAPIPath = "/openapi"
 	cfg.DocsPath = "/docs"

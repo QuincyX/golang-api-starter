@@ -14,9 +14,9 @@ import (
 // api → service → store. It parses imports instead of relying on review.
 func TestLayering(t *testing.T) {
 	rules := map[string][]string{
-		"internal/api":     {"github.com/example/homebrew-api-starter/internal/store"},
-		"internal/service": {"net/http", "github.com/example/homebrew-api-starter/internal/api", "github.com/example/homebrew-api-starter/internal/router"},
-		"internal/store":   {"github.com/example/homebrew-api-starter/internal/api", "github.com/example/homebrew-api-starter/internal/service", "github.com/example/homebrew-api-starter/internal/router"},
+		"internal/api":     {"github.com/example/golang-api-starter/internal/store"},
+		"internal/service": {"net/http", "github.com/example/golang-api-starter/internal/api", "github.com/example/golang-api-starter/internal/router"},
+		"internal/store":   {"github.com/example/golang-api-starter/internal/api", "github.com/example/golang-api-starter/internal/service", "github.com/example/golang-api-starter/internal/router"},
 	}
 
 	root := projectRoot(t)

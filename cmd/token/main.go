@@ -9,10 +9,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/example/homebrew-api-starter/internal/config"
-	"github.com/example/homebrew-api-starter/internal/platform/db"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/config"
+	"github.com/example/golang-api-starter/internal/platform/db"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 func main() {

@@ -123,3 +123,38 @@
   - 重写 [设计文档](./design.md)，移除历史阶段与外部项目对比，改为当前可复用基线
   - 文档索引、AGENTS 完成定义、engineering 测试章节同步
 - 验证：`go test ./...`、`go vet ./...`、`go build ./...`、`gofmt`
+
+## 2026-11-21 - 更名为 golang-api-starter 并移除 Docker / GitHub CI
+
+- 类型：变更 + 移除
+- 影响：
+  - 目录 `homebrew-api-starter/` → `golang-api-starter/`
+  - Go module `github.com/example/homebrew-api-starter` → `github.com/example/golang-api-starter`
+  - JWT issuer 默认值 `homebrew-api` → `golang-api`；`.env.example` 的 `JWT_ISSUER` 同步
+  - OpenAPI 标题 `Homebrew Admin API` → `Golang Admin API`
+  - 删除 `Dockerfile`、`.dockerignore`、`compose.yaml`、`Caddyfile`、`.github/workflows/ci.yml`
+  - `.env.example` 移除仅 Caddy 使用的 `ADMIN_DOMAIN`
+  - 本地启动改为直连 PostgreSQL 18，迁移仍由 `cmd/migrate` 独立执行
+  - 质量门禁保留在本地执行；CI 与部署环境由使用方自建
+- 验证：`gofmt -l .`、`go vet ./...`、`go test ./...`、`go build ./...`
+- 文档：[README](../README.md)、[AGENTS](../AGENTS.md)、[architecture](./architecture.md)、[engineering](./engineering.md)、[design](./design.md)、[testing](./testing.md)、[template-guide](./template-guide.md)、[docs/README](./README.md)、[constitution](../specs/constitution.md)
+
+## 2026-11-21 - Agent 友好质量门禁与 Go 1.27 现代化
+
+- 类型：新增 + 变更
+- 影响：
+  - `AGENTS.md` 重构为入口地图（≤100 行），细节留在 docs；完成定义改为 `task verify`
+  - 新增 `task verify` / `lint` / `vuln` / `api:update` / `api:breaking` / `migrations:checksum` / `test:integration`
+  - 新增 `.golangci.yml`（v2 格式：standard + misspell + modernize）
+  - 质量工具版本固定在 `Taskfile.yml` 的 vars：golangci-lint v2.15.0、govulncheck v1.10.0、oasdiff v1.39.0；应用 `go.mod` 不引入工具依赖图
+  - 新增 OpenAPI 快照 `cmd/api/testdata/openapi.json` 与 `TestOpenAPISnapshot`
+  - 新增迁移校验和 `internal/arch/testdata/migrations.sha256` 与 `TestMigrationChecksums`
+  - 新增 `internal/arch/format_test.go`（gofmt 纳入测试）与 `rules_test.go`（禁止直调 `huma.Register`、禁止 config 外读 env）
+  - 新增 `internal/store/integration_test.go` 只读冒烟骨架（`TEST_DATABASE_URL` + `-tags=integration`）
+  - Go toolchain `1.27.3` → `1.27.4`（修复 `net/http` GO-2026-6859）
+  - ID 改用标准库 `uuid`（`NewV7`），移除 `github.com/google/uuid`
+  - `go mod tidy` 同步 `golang.org/x/*` 等间接依赖到当前兼容版本
+  - 登录限流注入时钟，新增 `synctest` 假时钟测试
+  - `.gitignore` 增加 `/.tmp/`
+- 验证：`task verify`、`go test -tags=integration ./...`（无 `TEST_DATABASE_URL` 时 skip）、`go test -race` 未执行（Windows 无可用 CGO/gcc）
+- 文档：[README](../README.md)、[AGENTS](../AGENTS.md)、[architecture](./architecture.md)、[engineering](./engineering.md)、[design](./design.md)、[testing](./testing.md)、[template-guide](./template-guide.md)、[docs/README](./README.md)

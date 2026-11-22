@@ -7,7 +7,7 @@ import (
 )
 
 func TestSignAndParse(t *testing.T) {
-	manager, err := New(strings.Repeat("k", 32), "homebrew-api", "admin-web", 15*time.Minute)
+	manager, err := New(strings.Repeat("k", 32), "golang-api", "admin-web", 15*time.Minute)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestSignAndParse(t *testing.T) {
 }
 
 func TestRejectTamperedToken(t *testing.T) {
-	manager, _ := New(strings.Repeat("k", 32), "homebrew-api", "admin-web", 15*time.Minute)
+	manager, _ := New(strings.Repeat("k", 32), "golang-api", "admin-web", 15*time.Minute)
 	token, _, _ := manager.Sign("user-1", "session-1", 0)
 
 	if _, err := manager.Parse(token + "x"); err == nil {
@@ -39,8 +39,8 @@ func TestRejectTamperedToken(t *testing.T) {
 }
 
 func TestRejectWrongAudience(t *testing.T) {
-	manager, _ := New(strings.Repeat("k", 32), "homebrew-api", "admin-web", 15*time.Minute)
-	other, _ := New(strings.Repeat("k", 32), "homebrew-api", "other-app", 15*time.Minute)
+	manager, _ := New(strings.Repeat("k", 32), "golang-api", "admin-web", 15*time.Minute)
+	other, _ := New(strings.Repeat("k", 32), "golang-api", "other-app", 15*time.Minute)
 
 	token, _, _ := manager.Sign("user-1", "session-1", 0)
 	if _, err := other.Parse(token); err == nil {

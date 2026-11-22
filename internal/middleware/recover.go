@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/example/homebrew-api-starter/internal/api/shared"
+	"github.com/example/golang-api-starter/internal/api/shared"
 )
 
 func Recover(logger *slog.Logger) func(http.Handler) http.Handler {

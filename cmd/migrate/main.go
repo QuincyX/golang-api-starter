@@ -10,8 +10,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
-	"github.com/example/homebrew-api-starter/internal/config"
-	"github.com/example/homebrew-api-starter/migrations"
+	"github.com/example/golang-api-starter/internal/config"
+	"github.com/example/golang-api-starter/migrations"
 )
 
 func main() {

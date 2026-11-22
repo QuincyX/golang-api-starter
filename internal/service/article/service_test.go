@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/example/homebrew-api-starter/internal/model"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 func TestRenderSanitizesHTML(t *testing.T) {

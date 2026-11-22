@@ -2,8 +2,7 @@ package reqid
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 type contextKey struct{}
@@ -11,11 +10,7 @@ type contextKey struct{}
 // New returns a UUIDv7 request id. UUIDv7 is time-ordered, which makes request
 // ids sortable in logs.
 func New() string {
-	id, err := uuid.NewV7()
-	if err != nil {
-		return uuid.NewString()
-	}
-	return id.String()
+	return uuid.NewV7().String()
 }
 
 func With(ctx context.Context, id string) context.Context {

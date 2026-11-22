@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/example/homebrew-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/model"
 )
 
 const articleColumns = `id::text, slug, title, summary, content_md, content_html,

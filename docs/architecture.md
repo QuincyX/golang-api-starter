@@ -1,12 +1,12 @@
 # 架构说明
 
-本文描述 `homebrew-api-starter` 的运行时结构、模块职责、请求链和扩展位置。它回答“代码为什么这样分层”和“新功能应该放在哪里”。
+本文描述 `golang-api-starter` 的运行时结构、模块职责、请求链和扩展位置。它回答“代码为什么这样分层”和“新功能应该放在哪里”。
 
 > 修改分层、模块边界、路由契约、鉴权或审计机制时，必须同步更新本文和 [变更记录](./changelog.md)。
 
 ## 1. 定位与边界
 
-这是一个 **homebrew 管理后台接口服务的起始模板**。当前已实现 P1–P3：
+这是一个 **Golang 管理后台接口服务的起始模板**。当前已实现 P1–P3：
 
 - P1：邮箱密码登录、Argon2id、8h access JWT、session/`token_version` 校验、RBAC、账号管理、一次性设密链接
 - P2：文章 CRUD、发布/下线、版本记录、Markdown 渲染与 HTML 清洗
@@ -19,7 +19,7 @@
 ## 2. 运行时的分层
 
 ```text
-Caddy（同机 TLS）
+HTTP 客户端（TLS 由部署环境终止）
   │
   ▼
 chi 中间件链
@@ -80,7 +80,7 @@ PostgreSQL 18
 
 ## 4. 请求生命周期
 
-1. Caddy 终止 TLS，转发到 `api:8080`。
+1. 客户端直连 API `:8080`；TLS 与反向代理由部署环境提供，模板不内置代理配置。
 2. `RequestID` 接受合法 `X-Request-Id`，否则生成 UUIDv7。
 3. `RequestMeta` 写入 IP/UA/request id，供审计使用。
 4. `BodyLimit` 将请求体限制为 2 MiB。
@@ -112,6 +112,8 @@ router.Register(reg, api, router.Route{
 [registry.go](../internal/router/registry.go) 在 `Add` 时拒绝：非 GET 路由缺 `AuditAction`、`Public` 带 `Permission`、重复 `Method + Path`/`OperationID`、非法权限码/审计动作、空路径。
 
 [app.go](../cmd/api/app.go) 的 `verifyRouteCoverage` 用 `chi.Walk` 做双向比对：chi 有但 registry 没有 → 绕过 `Register`；registry 有但 chi 未挂载 → 声明漂移。两类问题都会让进程在监听前失败。
+
+OpenAPI 契约由 `cmd/api/testdata/openapi.json` 快照固定：`TestOpenAPISnapshot` 阻止未 Review 的 schema 漂移；`task api:breaking` 用 oasdiff 对 base 分支检查破坏性变更。`internal/arch` 还会机械检查“禁止直调 `huma.Register`”和“只有 config 包读环境变量”。
 
 ## 6. 鉴权与会话
 
@@ -191,14 +193,13 @@ router.Register(reg, api, router.Route{
 - 文章分类/标签表已建，但分类/标签 CRUD 未做；文章只接受 `categoryId`，标签未接。
 - 审计只做查询，没有导出、保留/归档任务、哈希链。
 - 没有 OTel trace；只有 Prometheus metrics。
-- 没有 `golangci-lint` 配置；当前门禁是 gofmt/vet/test/build。
-- 迁移、seed、登录、RBAC、文章发布、审计与 metrics 已在 WSL 的 PostgreSQL 18.6 手工验证；仍缺自动化集成测试（testcontainers）。
-- Docker 镜像构建与 Caddy 运行未在真实环境验证。
+- 门禁为 `task verify`（gofmt/vet/test/build/lint/vuln）；工具版本固定在 `Taskfile.yml`。
+- 迁移、seed、登录、RBAC、文章发布、审计与 metrics 已在 WSL 的 PostgreSQL 18.6 手工验证；自动化集成测试目前只有只读冒烟骨架，写路径待补。
 
 ## 12. 相关文档
 
-- [工程说明](./engineering.md)：命令、质量门禁、编码约束、CI/部署
-- [测试规范](./testing.md)：单元/集成边界、命名、确定性、覆盖率
+- [工程说明](./engineering.md)：命令、质量门禁、编码约束、部署
+- [测试规范](./testing.md)：单元/契约/集成边界、快照与迁移校验、确定性、覆盖率
 - [模板使用指南](./template-guide.md)：复制、重命名、清理示例业务
 - [变更记录](./changelog.md)：框架变更历史
 - [功能规格](../specs/README.md)：spec/plan/tasks/verification

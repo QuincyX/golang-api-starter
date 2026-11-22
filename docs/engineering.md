@@ -6,49 +6,35 @@
 
 | 项 | 要求 |
 | --- | --- |
-| Go | 1.27.x；`go.mod` 固定 `toolchain go1.27.3` |
+| Go | 1.27.x；`go.mod` 固定 `toolchain go1.27.4`（含 `net/http` 安全修复） |
 | PostgreSQL | 18.x（`uuidv7()` 依赖 18） |
 | Redis | 可选；当前只做配置校验，未建立连接 |
-| Docker | 可选；Compose 用于本地依赖与单机部署 |
+| 质量工具 | golangci-lint、govulncheck、oasdiff；版本固定在 `Taskfile.yml` 的 vars，无需全局安装 |
 | 系统 | Windows / Linux / macOS 均可；命令以跨平台 `go` 为准 |
 
-本机 Go 低于 `go.mod` 要求时，`GOTOOLCHAIN=auto` 会自动下载；网络受限时先升级本地 Go。
+本机 Go 低于 `go.mod` 要求时，`GOTOOLCHAIN=auto` 会自动下载；网络受限时先升级本地 Go。首次执行 `task lint` / `task vuln` 会构建 pinned 工具，耗时明显高于后续运行。
 
 ## 2. 安装与启动
 
-### 2.1 本地进程
+### 2.1 本地启动
+
+前置：本地 PostgreSQL 18 已启动，并按 `.env.example` 创建数据库（默认 `admin`）。
 
 ```bash
 cp .env.example .env
-docker compose up -d postgres
 go run ./cmd/migrate
 go run ./cmd/seed
 go run ./cmd/api
 ```
 
-API 默认监听 `:8080`；健康检查：
+`cmd/seed` 只在 `admin_users` 为空时创建超管，账号来自 `BOOTSTRAP_ADMIN_*`。API 默认监听 `:8080`；健康检查：
 
 ```bash
 curl http://127.0.0.1:8080/healthz
 curl http://127.0.0.1:8080/readyz
 ```
 
-### 2.2 全部走 Compose
-
-```bash
-cp .env.example .env
-docker compose up -d --build
-```
-
-Compose 先跑一次性 `migrate`，再启动 `api`，最后启动 Caddy。初始化首个超管：
-
-```bash
-go run ./cmd/seed
-```
-
-`cmd/seed` 只在 `admin_users` 为空时创建超管，账号来自 `BOOTSTRAP_ADMIN_*`。Caddy 默认域名 `localhost`；生产通过 `ADMIN_DOMAIN` 指定。
-
-### 2.3 PostgreSQL 与 Redis 配置
+### 2.2 PostgreSQL 与 Redis 配置
 
 PostgreSQL 使用分项环境变量，由 `config.Postgres.DSN()` 拼成 DSN：
 
@@ -73,11 +59,7 @@ REDIS_USERNAME=
 REDIS_PASSWORD=
 ```
 
-当前只校验 Redis 配置格式，**不建立连接**；后续做缓存/分布式限流时再启用。需要本地 Redis 时：
-
-```bash
-docker compose --profile cache up -d redis
-```
+当前只校验 Redis 配置格式，**不建立连接**；后续做缓存/分布式限流时再启用，本地需要时自行启动 Redis。
 
 其他运维配置：
 
@@ -105,70 +87,99 @@ go run ./cmd/token -email admin@example.com
 
 ## 3. 命令
 
-| 命令 | 用途 | 是否进入 CI |
+| 命令 | 用途 | 是否必须 |
 | --- | --- | --- |
+| `task verify` | 聚合门禁：vet、test、build、lint、vuln | 是 |
+| `task lint` | `go run ...golangci-lint@<pinned> run ./...` | 是 |
+| `task vuln` | `go run ...govulncheck@<pinned> ./...` | 是 |
+| `task test` | 单元/契约/文档测试（含 gofmt 检查） | 是 |
+| `task test:race` | 竞态检测（需 CGO/Linux） | 是（Linux） |
+| `task test:integration` | 真实 PostgreSQL 集成测试（需 `TEST_DATABASE_URL`） | 涉及 SQL/事务时 |
+| `task api:update` | 重新生成 OpenAPI 快照 | 契约有意变更时 |
+| `task api:breaking` | 对 base 分支做 OpenAPI 破坏性变更检测 | 改 API 时 |
+| `task migrations:checksum` | 刷新迁移校验和清单 | 新增迁移时 |
 | `go run ./cmd/api` | 启动 API | 否 |
-| `go run ./cmd/migrate` | 执行 goose 迁移 | 否（部署 Job） |
+| `go run ./cmd/migrate` | 执行 goose 迁移 | 否（部署时先执行） |
 | `go run ./cmd/seed` | 初始化首个超管（表为空时） | 否 |
 | `go run ./cmd/token -email ...` | 签发带 session 的开发 access token | 否 |
 | `go build ./...` | 编译全部命令 | 是 |
 | `go vet ./...` | 静态检查 | 是 |
-| `go test ./...` | 单元/契约/文档测试 | 是 |
-| `go test -race -shuffle=on ./...` | 竞态检测（需 CGO） | 是（Linux） |
-| `go test ./internal/arch` | 文档链接与必需文件检查 | 是（含在 `./...`） |
-| `gofmt -l .` | 格式检查；输出必须为空 | 是（人工/PR） |
+| `gofmt -l .` | 格式检查；输出必须为空（`task test` 已包含） | 是 |
 | `go mod verify` | 依赖完整性 | 否 |
 | `go mod tidy` | 整理依赖 | 否 |
-| `docker compose config --quiet` | Compose 语法校验 | 是（涉及编排时） |
-| `docker compose up -d --build` | 本地/单机启动 | 否 |
 
-Windows 下 `go test -race` 需要可用的 CGO/gcc；没有时以 CI 的 Linux 结果为准，不要为绕过检查而删除 race 步骤。
+Windows 下 `go test -race` 需要可用的 CGO/gcc；没有时在 Linux 环境执行一次，不要为绕过检查而删除 race 步骤。
 
 ## 4. 完整质量门禁
 
-框架变更在提交前至少执行：
+框架变更在提交前执行：
 
 ```bash
-gofmt -l .          # 必须没有输出
-go vet ./...
-go test ./...
-go build ./...
+task verify   # gofmt 检查 + go vet + go test + go build + lint + vuln
 ```
 
-涉及 Compose、Dockerfile、Caddy、环境变量或迁移时，再执行：
+`task test` 内的 `internal/arch` 会执行 `gofmt -l .`，格式不干净会直接失败。涉及环境变量或迁移时，再执行：
 
 ```bash
-docker compose config --quiet
 go run ./cmd/migrate   # 需要可用 PostgreSQL
 ```
 
-涉及并发、认证、事务或审计时，必须在 Linux/CI 跑一次：
+涉及 SQL、事务或查询时，用已迁移的测试库跑一次：
 
 ```bash
-go test -race -shuffle=on ./...
+TEST_DATABASE_URL=postgres://... task test:integration
+```
+
+涉及并发、认证、事务或审计时，必须在 Linux 环境跑一次：
+
+```bash
+task test:race
+```
+
+新增迁移后刷新校验和清单并 Review 差异：
+
+```bash
+task migrations:checksum
+```
+
+修改 API 契约后更新快照，并用 base 分支检查破坏性变更：
+
+```bash
+task api:update
+BASE=main task api:breaking
 ```
 
 没有执行的检查必须在最终说明中列出原因和风险，不能默认为通过。
 
 ## 5. 变更分类与文档义务
 
-这是硬性要求，详细矩阵见 [AGENTS.md](../AGENTS.md)。
+这是硬性要求。`AGENTS.md` 只保留入口地图，矩阵以本节为准：
+
+| 变更内容 | 必须更新 |
+| --- | --- |
+| 分层、目录职责、请求链、路由契约 | [architecture](./architecture.md) + [changelog](./changelog.md) |
+| 测试边界、命名、确定性、快照/集成门禁 | [testing](./testing.md) + [changelog](./changelog.md) |
+| 依赖、命令、部署、环境变量、质量工具 | 本文 + [README](../README.md) + [changelog](./changelog.md) |
+| Agent 规则、完成定义、文档治理 | [AGENTS](../AGENTS.md) + 本文 + [changelog](./changelog.md) |
+| spec 流程、模板、状态机 | [specs/README](../specs/README.md) + [constitution](../specs/constitution.md) + [changelog](./changelog.md) |
+| 业务功能 | 目标 `specs/NNN-*/` + `verification.md`；用户可见时更新 [README](../README.md) |
+| 文档索引或链接调整 | [docs/README](./README.md) + [changelog](./changelog.md) |
 
 ### 业务变更
 
 只修改占位业务（例如把文章列表接到真实查询）时：
 
-- 至少运行 `gofmt`、`go vet`、相关测试和 `go build`；
-- 影响用户可见接口时，检查 README 与 `rest/` 是否仍准确；
+- 至少运行 `task verify`；
+- 影响用户可见接口时，检查 README 与 `rest/` 是否仍准确，并更新 OpenAPI 快照；
 - 不强制写框架变更记录。
 
 ### 框架变更
 
-涉及依赖、Go 版本、路由契约、`api`/`middleware`/`platform` 结构、配置、迁移、鉴权/审计机制、CI、Docker、Compose 或 Agent 规则时：
+涉及依赖、Go 版本、路由契约、`api`/`middleware`/`platform` 结构、配置、迁移、鉴权/审计机制、部署方式、质量门禁或 Agent 规则时：
 
 1. 更新 [变更记录](./changelog.md)。
-2. 按矩阵更新 [架构说明](./architecture.md)、本文、[README](../README.md) 或 [AGENTS](../AGENTS.md)。
-3. 执行完整质量门禁。
+2. 按上面的矩阵更新受影响的文档。
+3. 执行完整质量门禁（`task verify`）。
 4. 在最终说明中列出更新过的文档。
 
 **“代码先合并，文档以后补”不被接受。**
@@ -207,7 +218,8 @@ go test -race -shuffle=on ./...
 
 ### 6.1 Go
 
-- 使用 `gofmt`；提交前 `gofmt -l .` 为空。
+- 使用 `gofmt`；`task format` 调用配置好的 gofmt/goimports，`task test` 中的 `TestGofmtClean` 会强制 `gofmt -l .` 为空。
+- 工具链以 `go.mod` 的 `go`/`toolchain` 为准（当前 1.27.4）；现代化改写用 `go fix ./...` 或 `task lint` 的 `modernize`，不要手写等价改写。
 - `context.Context` 作为第一个参数贯穿 handler/service/store；禁止把 `context.Background()` 带进 DB 调用。
 - 错误用 `%w` 包装；领域错误保持可 `errors.Is/As`；不要用 panic 做控制流。
 - 不用全局可变状态；依赖在 `cmd/api` 组装后显式传入。禁止新增 `service`/`dao` 全局单例。
@@ -242,7 +254,7 @@ go test -race -shuffle=on ./...
 - 管理后台不开放公开注册；首超管通过 seed/邀请创建，首次登录强制改密。
 - 登录限流、失败锁定、一次性设密链接、access 过期重登在 P1 实现；P1 不引入 refresh token。不要在日志里打印凭据。
 - **JWT Bearer，不使用 Cookie**：CORS 只允许精确 origin；前端 token 存 `sessionStorage`，必须防 XSS（CSP、输入清洗、禁用 `v-html`）。
-- 请求体上限 2 MiB；Caddy 与 API 双重限制。
+- 请求体上限 2 MiB，由 API 中间件强制；部署环境可再加一层限制。
 
 ### 6.5 审计
 
@@ -255,15 +267,17 @@ go test -race -shuffle=on ./...
 
 - 测试边界、命名、确定性、覆盖率和用例清单只维护在 [测试规范](./testing.md)。
 - 新增业务代码至少覆盖成功路径 + 一个失败/权限路径；鉴权改动覆盖 401/403，富文本改动覆盖 XSS。
-- `go test -race` 在 CI Linux 执行；本机无 CGO 时不要伪称已跑。
+- `go test -race` 在 Linux 环境执行；本机无 CGO 时不要伪称已跑。
 
 ## 7. 依赖策略
 
 - 标准库优先；新增依赖必须说明用途、维护状态、替代方案和移除成本。
-- 已选型：chi、huma、pgx、goose、`golang-jwt/jwt/v5`、`caarlos0/env`、`google/uuid`、`log/slog`、goldmark、bluemonday、prometheus/client_golang。SQL 当前是显式参数化查询。
+- 已选型：chi、huma、pgx、goose、`golang-jwt/jwt/v5`、`caarlos0/env`、`log/slog`、goldmark、bluemonday、prometheus/client_golang；ID 使用 Go 1.27 标准库 `uuid`（UUIDv7）。SQL 当前是显式参数化查询。
+- `encoding/json` 继续使用 v1 API；Go 1.27 的 v1 已由 `encoding/json/v2` 实现，行为保持兼容。需要严格拒绝重复 key/非法 UTF-8 时，再显式引入 v2 API 并补契约测试。
+- 质量工具（golangci-lint、govulncheck、oasdiff）版本固定在 `Taskfile.yml` 的 vars；升级工具版本时同时更新 [changelog](./changelog.md)。
 - 不引入 ORM、proto3/gRPC、Redis、消息队列或微服务，除非有 spec/ADR 和明确需求。
 - 大版本升级必须更新 [变更记录](./changelog.md)、[工程说明](./engineering.md) 和 [README](../README.md)（涉及使用方式时）。
-- 依赖漏洞用 `govulncheck` 或 CI 安全扫描；不要为了通过检查删除安全步骤。
+- 依赖漏洞用 `task vuln` 扫描；不要为了通过检查删除安全步骤。
 
 ## 8. 测试约束
 
@@ -271,33 +285,35 @@ go test -race -shuffle=on ./...
 
 | 层 | 当前实现 |
 | --- | --- |
-| 单元 | 标准库 `testing`：密码、JWT、限流、slug/diff、分页、metrics、middleware |
-| Handler | `httptest` + 真实 chi/huma：状态码、problem+json、401/403、OpenAPI |
-| 架构/文档 | `internal/arch`：相对链接、必需文档、api→service→store 依赖 |
-| 集成 | 真实 PostgreSQL，显式开启；当前未接入 CI |
+| 单元 | 标准库 `testing`：密码、JWT、限流（含 `synctest` 假时钟）、slug/diff、分页、metrics、middleware |
+| Handler | `httptest` + 真实 chi/huma：状态码、problem+json、401/403、OpenAPI 快照 |
+| 架构/文档 | `internal/arch`：相对链接、必需文档、分层依赖、`huma.Register`/`os.Getenv` 边界、gofmt、迁移校验和 |
+| 集成 | `TEST_DATABASE_URL` + `-tags=integration`；当前为只读冒烟骨架，未接入自动化流水线 |
 
-- 默认 `go test ./...` 不依赖 `.env`、数据库、Redis、Docker 或网络。
+- 默认 `go test ./...` 不依赖 `.env`、数据库、Redis 或网络。
+- OpenAPI 快照在 `cmd/api/testdata/openapi.json`；契约变更用 `task api:update` 更新并 Review 差异。
+- 迁移校验和在 `internal/arch/testdata/migrations.sha256`；新增迁移用 `task migrations:checksum` 更新。
 - 新增业务代码目标 70%（排除生成代码）；当前基座整体覆盖率受 store/集成缺口影响，未达该目标。
-- 不提交 `tmp/`、日志、覆盖率产物；`.gitignore` 已覆盖。
+- 不提交 `tmp/`、`.tmp/`、日志、覆盖率产物；`.gitignore` 已覆盖。
 
-## 9. CI 与部署
+## 9. 部署与运维
 
-CI（[.github/workflows/ci.yml](../.github/workflows/ci.yml)）：
+仓库不内置容器、编排或 CI 配置；部署方式由使用方按运行环境决定。
+
+质量门禁在本地执行（见第 4 节）。使用自建流水线时复用同一组命令：
 
 ```text
-go mod download → go vet → go test -race → go build
+go mod download → task verify → task test:race
 ```
 
-Runner 使用 Go 1.27.x；`go test ./...` 包含路由契约与文档链接检查。
+`task test` 包含路由契约、文档链接、gofmt、迁移校验和与 OpenAPI 快照检查。
 
-单机部署：
+部署约定：
 
-- `docker compose` 启动 `postgres`、一次性 `migrate`、`api`、`caddy`。
-- 迁移先于 API；`migrate` 使用 `entrypoint: ["/app/migrate"]`；`go run ./cmd/seed` 创建首个超管。
-- Redis 默认不启动；需要时 `docker compose --profile cache up -d redis`，当前代码仍不连接。
-- API 只监听容器内 `:8080`；Caddy 暴露 80/443；Postgres 仅绑定 `127.0.0.1:5432` 供本地调试。
-- Metrics 默认在 `127.0.0.1:9090`；Compose 只映射到宿主 loopback，生产由 Prometheus 内网抓取。
-- 镜像为多阶段构建 + distroless 非 root；配置全部来自环境变量。
+- 迁移先于 API：先执行 `go run ./cmd/migrate`（或编译后的 `migrate` 二进制），再启动 API；`go run ./cmd/seed` 创建首个超管。
+- 配置全部来自环境变量；`.env` 仅供本地，生产使用 Secret 注入 `JWT_SECRET` 与数据库凭据。
+- API 默认监听 `:8080`，metrics 默认 `127.0.0.1:9090`；TLS、反向代理与进程守护由部署环境提供，metrics 只绑定内网/loopback。
+- Redis 当前不连接；需要时由部署环境单独提供。
 - 备份：每日 `pg_dump -Fc` + 异地对象存储；需要 PITR 再加 WAL 归档。
 - 单机不是高可用；明确 RTO/RPO，定期恢复演练。
 
@@ -305,7 +321,8 @@ Runner 使用 Go 1.27.x；`go test ./...` 包含路由契约与文档链接检�
 
 - 一个 PR 只做一个可解释的变更；不混入无关重构。
 - 说明变更分类（业务/框架）、影响面、验证命令和未验证项。
-- 新增/修改接口附带路由契约、权限、审计动作和测试。
+- 新增/修改接口附带路由契约、权限、审计动作、测试和 OpenAPI 快照 diff。
+- 新增迁移附带校验和清单 diff；SQL/事务改动附带集成测试证据。
 - 框架变更附带文档更新链接。
 - 不提交 `.env`、密钥、token、生产配置、生成日志。
 - 不删除测试、不放宽质量门禁来换取通过。
@@ -318,7 +335,7 @@ Runner 使用 Go 1.27.x；`go test ./...` 包含路由契约与文档链接检�
 
 ### `/readyz` 返回 503
 
-`POSTGRES_*` 配置不可达，或 `DATABASE_URL` 覆盖指向了错误地址。本地先 `docker compose up -d postgres`，再 `go run ./cmd/migrate`。
+`POSTGRES_*` 配置不可达，或 `DATABASE_URL` 覆盖指向了错误地址。先确认本地 PostgreSQL 已启动，再 `go run ./cmd/migrate`。
 
 ### 启动时报 `route contract mismatch`
 
@@ -330,11 +347,27 @@ Runner 使用 Go 1.27.x；`go test ./...` 包含路由契约与文档链接检�
 
 ### Go 工具链版本不匹配
 
-`go.mod` 要求 1.27.0 / toolchain 1.27.3；执行 `go env GOTOOLCHAIN` 应为 `auto`，或手动升级 Go。
+`go.mod` 要求 1.27.0 / toolchain 1.27.4；执行 `go env GOTOOLCHAIN` 应为 `auto`，或手动升级 Go。1.27.4 修复了 `net/http` 的安全问题，不要降回 1.27.3。
 
-### Docker 构建失败
+### `TestGofmtClean` 失败
 
-先确认 Docker daemon 已启动；`docker compose config --quiet` 只校验编排语法，不需要 daemon。迁移/镜像构建需要真实数据库或 daemon。
+有 Go 文件未格式化；执行 `task format`（或 `gofmt -w .`）后重新跑 `task test`，不要删除该测试。
+
+### OpenAPI snapshot changed
+
+契约有意变更时，Review `cmd/api/testdata/openapi.json` 的 diff 后执行 `task api:update`；再用 `BASE=main task api:breaking` 确认没有非预期破坏性变更。
+
+### `task api:breaking` 报 `invalid object name` / `path ... does not exist`
+
+base 分支还没有提交 OpenAPI 快照。先把 `cmd/api/testdata/openapi.json` 合并到基线分支，或显式传 `BASE=<commit>`。该任务比较的是已提交的快照，不是工作区文件。
+
+### `TestMigrationChecksums` 失败
+
+已有迁移文件被改动，或新增迁移后未刷新清单。确认不是修改已应用迁移，再执行 `task migrations:checksum` 并 Review 差异。
+
+### `task lint` / `task vuln` 首次运行很慢
+
+首次会按 `Taskfile.yml` 固定的版本下载并构建工具，属正常现象；后续复用构建缓存。
 
 ### 文档链接检查失败
 
@@ -342,13 +375,11 @@ Runner 使用 Go 1.27.x；`go test ./...` 包含路由契约与文档链接检�
 
 ## 12. 完成定义
 
-完整清单见 [AGENTS.md 的完成定义](../AGENTS.md#8-完成定义)。最低要求：
+完整规则见 [AGENTS.md](../AGENTS.md)。最低要求：
 
 ```text
-gofmt -l .          空输出
-go vet ./...        PASS
-go test ./...       PASS
-go build ./...      PASS
+task verify     PASS
+task test:race  PASS（Linux/CGO 可用时）
 ```
 
-涉及 Compose/Docker、迁移、鉴权或审计时，按 [第 4 节](#4-完整质量门禁) 追加检查；未执行项必须在交付说明中列出。
+涉及迁移、鉴权、审计或 API 契约时，按 [第 4 节](#4-完整质量门禁) 追加检查；未执行项必须在交付说明中列出。

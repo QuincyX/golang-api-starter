@@ -3,6 +3,7 @@ package auth
 import (
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -39,7 +40,7 @@ func TestNeedsRehash(t *testing.T) {
 
 func TestLoginLimiter(t *testing.T) {
 	limiter := newLoginLimiter()
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if !limiter.allow("ip:127.0.0.1", 3, time.Hour) {
 			t.Fatalf("attempt %d should be allowed", i+1)
 		}
@@ -47,4 +48,25 @@ func TestLoginLimiter(t *testing.T) {
 	if limiter.allow("ip:127.0.0.1", 3, time.Hour) {
 		t.Fatal("fourth attempt should be rejected")
 	}
+}
+
+// TestLoginLimiterWindowResets uses synctest's fake clock, so the expiry is
+// verified instantly and does not depend on wall-clock sleep.
+func TestLoginLimiterWindowResets(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		limiter := newLoginLimiter()
+		for i := range 3 {
+			if !limiter.allow("ip:127.0.0.1", 3, time.Hour) {
+				t.Fatalf("attempt %d should be allowed", i+1)
+			}
+		}
+		if limiter.allow("ip:127.0.0.1", 3, time.Hour) {
+			t.Fatal("fourth attempt should be rejected")
+		}
+
+		synctest.Sleep(time.Hour + time.Second)
+		if !limiter.allow("ip:127.0.0.1", 3, time.Hour) {
+			t.Fatal("attempt after the window reset should be allowed")
+		}
+	})
 }

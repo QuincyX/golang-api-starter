@@ -26,10 +26,11 @@
 
 ## Phase 5: Verification
 
-- [ ] T007 运行 `gofmt -l .`、`go vet ./...`、`go test ./...`、`go build ./...`
-- [ ] T008 涉及数据库时运行迁移与集成测试
-- [ ] T009 涉及路由时确认 `verifyRouteCoverage` 通过
-- [ ] T010 更新 `verification.md` 和必要文档
+- [ ] T007 运行 `task verify`
+- [ ] T008 涉及数据库时运行迁移与 `TEST_DATABASE_URL=... task test:integration`
+- [ ] T009 涉及路由时确认 `verifyRouteCoverage` 通过，并更新 OpenAPI 快照
+- [ ] T010 涉及迁移时运行 `task migrations:checksum`
+- [ ] T011 更新 `verification.md` 和必要文档
 
 ## 规则
 

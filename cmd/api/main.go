@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/example/homebrew-api-starter/internal/config"
-	"github.com/example/homebrew-api-starter/internal/platform/db"
-	"github.com/example/homebrew-api-starter/internal/platform/jwt"
-	"github.com/example/homebrew-api-starter/internal/platform/logx"
-	metricsplatform "github.com/example/homebrew-api-starter/internal/platform/metrics"
+	"github.com/example/golang-api-starter/internal/config"
+	"github.com/example/golang-api-starter/internal/platform/db"
+	"github.com/example/golang-api-starter/internal/platform/jwt"
+	"github.com/example/golang-api-starter/internal/platform/logx"
+	metricsplatform "github.com/example/golang-api-starter/internal/platform/metrics"
 )
 
 // version is injected with -ldflags "-X main.version=...".

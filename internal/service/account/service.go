@@ -7,16 +7,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/example/homebrew-api-starter/internal/audit"
-	authpkg "github.com/example/homebrew-api-starter/internal/auth"
-	"github.com/example/homebrew-api-starter/internal/model"
-	authsvc "github.com/example/homebrew-api-starter/internal/service/auth"
-	"github.com/example/homebrew-api-starter/internal/store"
+	"github.com/example/golang-api-starter/internal/audit"
+	authpkg "github.com/example/golang-api-starter/internal/auth"
+	"github.com/example/golang-api-starter/internal/model"
+	authsvc "github.com/example/golang-api-starter/internal/service/auth"
+	"github.com/example/golang-api-starter/internal/store"
 )
 
 var (
@@ -175,13 +176,7 @@ func (s *Service) SetRoles(ctx context.Context, actor authpkg.Principal, userID 
 	if err != nil {
 		return err
 	}
-	willBeSuper := false
-	for _, code := range roleCodes {
-		if code == "super_admin" {
-			willBeSuper = true
-			break
-		}
-	}
+	willBeSuper := slices.Contains(roleCodes, "super_admin")
 	if isSuper && !willBeSuper {
 		count, err := s.store.Queries().CountActiveSuperAdmins(ctx)
 		if err != nil {

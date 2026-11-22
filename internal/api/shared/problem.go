@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/example/homebrew-api-starter/internal/platform/reqid"
+	"github.com/example/golang-api-starter/internal/platform/reqid"
 )
 
 // Problem is the RFC 9457 error body. Message is kept as an alias of Detail so

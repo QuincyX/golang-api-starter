@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/example/homebrew-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/model"
 )
 
 const userColumns = `id::text, email, password_hash, display_name, status,

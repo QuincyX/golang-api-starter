@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/example/homebrew-api-starter/internal/platform/reqid"
-	"github.com/example/homebrew-api-starter/internal/platform/requestmeta"
+	"github.com/example/golang-api-starter/internal/platform/reqid"
+	"github.com/example/golang-api-starter/internal/platform/requestmeta"
 )
 
 func RequestMeta() func(http.Handler) http.Handler {

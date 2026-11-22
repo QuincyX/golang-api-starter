@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/example/homebrew-api-starter/internal/platform/reqid"
+	"github.com/example/golang-api-starter/internal/platform/reqid"
 )
 
 const RequestIDHeader = "X-Request-Id"

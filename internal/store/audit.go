@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/example/homebrew-api-starter/internal/model"
+	"github.com/example/golang-api-starter/internal/model"
 )
 
 func (q *Queries) ListAuditLogs(ctx context.Context, limit int, cursor int64, action, actorID string) ([]model.AuditLog, int64, error) {

@@ -105,7 +105,7 @@ func (r Redis) Validate() error {
 }
 
 // Config is the complete runtime configuration. Everything comes from the
-// environment so the same binary runs locally, in CI, and on the single VM.
+// environment so the same binary runs locally and in the deployment target.
 type Config struct {
 	AppEnv      string `env:"APP_ENV" envDefault:"development"`
 	HTTPAddr    string `env:"HTTP_ADDR" envDefault:":8080"`
@@ -118,7 +118,7 @@ type Config struct {
 	AdminWebURL string `env:"ADMIN_WEB_URL" envDefault:"http://localhost:5173"`
 
 	JWTSecret   string        `env:"JWT_SECRET,required"`
-	JWTIssuer   string        `env:"JWT_ISSUER" envDefault:"homebrew-api"`
+	JWTIssuer   string        `env:"JWT_ISSUER" envDefault:"golang-api"`
 	JWTAudience string        `env:"JWT_AUDIENCE" envDefault:"admin-web"`
 	AccessTTL   time.Duration `env:"ACCESS_TTL" envDefault:"8h"`
 
