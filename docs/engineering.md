@@ -277,6 +277,7 @@ BASE=main task api:breaking
 - 质量工具（golangci-lint、govulncheck、oasdiff）版本固定在 `Taskfile.yml` 的 vars；升级工具版本时同时更新 [changelog](./changelog.md)。
 - 不引入 ORM、proto3/gRPC、Redis、消息队列或微服务，除非有 spec/ADR 和明确需求。
 - 大版本升级必须更新 [变更记录](./changelog.md)、[工程说明](./engineering.md) 和 [README](../README.md)（涉及使用方式时）。
+- 最新可用版本用 `go list -m -u all` 检查（只读，不改 `go.mod`）；升级后同次更新 [变更记录](./changelog.md) 并跑 `task verify`。
 - 依赖漏洞用 `task vuln` 扫描；不要为了通过检查删除安全步骤。
 
 ## 8. 测试约束

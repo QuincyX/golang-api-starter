@@ -158,3 +158,18 @@
   - `.gitignore` 增加 `/.tmp/`
 - 验证：`task verify`、`go test -tags=integration ./...`（无 `TEST_DATABASE_URL` 时 skip）、`go test -race` 未执行（Windows 无可用 CGO/gcc）
 - 文档：[README](../README.md)、[AGENTS](../AGENTS.md)、[architecture](./architecture.md)、[engineering](./engineering.md)、[design](./design.md)、[testing](./testing.md)、[template-guide](./template-guide.md)、[docs/README](./README.md)
+
+## 2026-11-23 - 依赖升级到当前最新可用版本
+
+- 类型：变更
+- 影响：
+  - 直接依赖：`caarlos0/env/v11` v11.4.1 → v11.4.2、`danielgtaylor/huma/v2` v2.40.0 → v2.41.0、`jackc/pgx/v5` v5.12.0 → v5.13.0、`pressly/goose/v3` v3.29.0 → v3.30.1
+  - 间接依赖：`jackc/puddle/v2` v2.2.3 → v2.2.4、`mfridman/interpolate` v0.0.2 → v0.2.0、`prometheus/procfs` v0.22.0 → v0.23.0、`prometheus/common` v0.72.0 → v0.74.0；goose 3.30 不再需要 `go.yaml.in/yaml/v3`（`go mod tidy` 移除），huma 2.41 带入 `pandatix/go-abnf`（间接）
+  - 已是各自最新、无需变更：chi v5.5.0、`golang-jwt/jwt/v5` v5.3.1、godotenv v1.5.1、bluemonday v1.0.27、prometheus/client_golang v1.25.0、goldmark v1.8.7、`golang.org/x/crypto` v0.59.0
+  - 工具链：`toolchain go1.27.4` 即当前最新（模块代理上 windows-amd64 最高为 1.27.4）；`Taskfile.yml` 的 golangci-lint v2.15.0 / govulncheck v1.10.0 / oasdiff v1.39.0 也已是最新，全部未变
+  - OpenAPI 契约无漂移：`TestOpenAPISnapshot` 通过，`cmd/api/testdata/openapi.json` 未改
+- 验证：
+  - `go list -m -u all` 确认无剩余可升级项（仅模块图中已废弃的 `golang/protobuf` 间接节点，不在 `go.mod`）
+  - `task verify` 通过（`go vet`、`go test ./...`、`go build ./...`、golangci-lint 0 issues、govulncheck 无漏洞）
+  - `go test -race` 未执行（Windows 无可用 CGO/gcc，与上次记录相同）
+- 文档：本条记录、[engineering §7 依赖策略](./engineering.md#7-依赖策略)（补充最新版检查命令）
